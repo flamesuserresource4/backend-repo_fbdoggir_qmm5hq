@@ -2,47 +2,41 @@
 Database Schemas
 
 Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
+Each Pydantic model corresponds to a MongoDB collection where the
+collection name is the lowercase of the class name.
 
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Example: class UserAccount -> collection "useraccount"
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, List, Literal
 
-# Example schemas (replace with your own):
+# Access tiers used to gate models/tools
+Tier = Literal["Starter", "Plus", "Pro", "Enterprise"]
 
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+class UserAccount(BaseModel):
+    email: EmailStr
+    name: Optional[str] = None
+    tier: Tier = Field("Starter", description="Subscription tier")
+    api_key: str = Field(..., description="User API key for simple header-based auth")
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant", "system"]
+    content: str
 
-# Add your own schemas here:
-# --------------------------------------------------
+class ChatSession(BaseModel):
+    user_key: str
+    messages: List[ChatMessage]
+    selected_models: Optional[List[str]] = None
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class GenerationRequest(BaseModel):
+    user_key: str
+    kind: Literal["image", "video"]
+    tool: Optional[str] = None
+    prompt: str
+
+# Optional: Simple audit log for requests
+class AuditLog(BaseModel):
+    user_key: str
+    action: Literal["chat", "image", "video", "upgrade"]
+    detail: Optional[str] = None
